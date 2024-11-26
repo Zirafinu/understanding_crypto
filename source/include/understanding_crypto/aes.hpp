@@ -10,10 +10,27 @@
 
 namespace understanding_crypto::aes {
 using key128_t = std::span<uint8_t, 16>;
+using key192_t = std::span<uint8_t, 24>;
+using key256_t = std::span<uint8_t, 32>;
+
 using state_t = std::array<uint32_t, 4>;
+
 template <typename KEY_T> class AES {
+    consteval static int round_count() {
+        if constexpr (std::is_same_v<KEY_T, key128_t>)
+            return 10;
+        else if constexpr (std::is_same_v<KEY_T, key192_t>)
+            return 12;
+        else if constexpr (std::is_same_v<KEY_T, key256_t>)
+            return 14;
+        else
+            static_assert(std::is_same_v<KEY_T, key128_t>, "invalid key type");
+    }
+
   public:
     using key_t = KEY_T;
+    constexpr static auto ROUNDS = round_count();
+    using expanded_keys_t = std::array<state_t, ROUNDS>;
 
   public:
     struct Encryption {
@@ -96,6 +113,12 @@ template <typename KEY_T> class AES {
                 word ^= key;
             }
             return state;
+        }
+
+        static expanded_keys_t expand_key(key_t &key) {
+            expanded_keys_t expanded;
+
+            return expanded;
         }
     };
 
