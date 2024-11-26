@@ -21,7 +21,8 @@
     "testPresets": [
         {
             "name": "default",
-            "configurePreset": "default"
+            "configurePreset": "default",
+            "output": {"outputOnFailure": true}
         }
     ],
     "workflowPresets": [
