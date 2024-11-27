@@ -17,9 +17,10 @@ TEST_SUITE("encrypt") {
         CHECK_EQ(AES<key128_t>::Encryption::substitute_bytes(state), expected);
     }
     TEST_CASE("row shift") {
-        auto state = state_t{1, 2, 3, 4};
+        auto state = state_t{0x01020304, 0x02030405, 0x03040506, 0x04050607};
 
-        constexpr auto expected = state_t{1, 0x200, 0x30000, 0x4000000};
+        constexpr auto expected =
+            state_t{0x01020304, 0x03040502, 0x05060304, 0x07040506};
         CHECK_EQ(AES<key128_t>::Encryption::row_shift(state), expected);
     }
     TEST_CASE("column mix") {
@@ -39,9 +40,10 @@ TEST_SUITE("decrypt") {
         CHECK_EQ(AES<key128_t>::Decryption::substitute_bytes(state), expected);
     }
     TEST_CASE("row shift") {
-        auto state = state_t{1, 0x200, 0x30000, 0x4000000};
+        auto state = state_t{0x01020304, 0x03040502, 0x05060304, 0x07040506};
 
-        constexpr auto expected = state_t{1, 2, 3, 4};
+        constexpr auto expected =
+            state_t{0x01020304, 0x02030405, 0x03040506, 0x04050607};
         CHECK_EQ(AES<key128_t>::Decryption::row_shift(state), expected);
     }
     TEST_CASE("column mix") {

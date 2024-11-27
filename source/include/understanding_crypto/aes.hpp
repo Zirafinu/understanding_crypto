@@ -36,7 +36,7 @@ template <typename KEY_T> class AES {
     struct Encryption {
         static state_t &row_shift(state_t &state) {
             for (auto i = 1U; i < state.size(); ++i) {
-                state[i] = (state[i] << (8 * i)) | (state[i] >> (32 - 8 * 1));
+                state[i] = (state[i] << (8 * i)) | (state[i] >> (32 - 8 * i));
             }
             return state;
         }
@@ -115,7 +115,7 @@ template <typename KEY_T> class AES {
     struct Decryption {
         static state_t &row_shift(state_t &state) {
             for (auto i = 1U; i < state.size(); ++i) {
-                state[i] = (state[i] >> (8 * i)) | (state[i] << (32 - 8 * 1));
+                state[i] = (state[i] >> (8 * i)) | (state[i] << (32 - 8 * i));
             }
             return state;
         }
