@@ -225,6 +225,17 @@ template <typename KEY_T> class AES {
             }
             return expanded;
         }
+
+        static state_t &transpose(state_t &state) {
+            auto copy = state;
+            for (auto i = 0U; i < state.size(); ++i) {
+                state[3 - i] = (((copy[0] >> (8 * i)) & 0xFF) << 24) |
+                               (((copy[1] >> (8 * i)) & 0xFF) << 16) |
+                               (((copy[2] >> (8 * i)) & 0xFF) << 8) |
+                               (((copy[3] >> (8 * i)) & 0xFF) << 0);
+            }
+            return state;
+        }
     };
 
   public:

@@ -104,6 +104,12 @@ TEST_SUITE("common") {
         CHECK_EQ(expanded[1], expected_1);
         CHECK_EQ(expanded[14], expected_14);
     }
+    TEST_CASE("transpose") {
+        state_t state = {0x01020304, 0x05060708, 0x090a0b0c, 0x0d0e0f10};
+        constexpr auto expected =
+            state_t{0x0105090d, 0x02060a0e, 0x03070b0f, 0x04080c10};
+        CHECK_EQ(AES<key128_t>::Common::transpose(state), expected);
+    }
     TEST_CASE("add round key") {
         auto state = state_t{1, 2, 3, 4};
         constexpr auto key = state_t{4, 3, 2, 1};
