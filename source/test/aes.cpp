@@ -18,7 +18,13 @@ TEST_SUITE("examples") {
 }
 
 TEST_SUITE("encrypt") {
-    TEST_CASE("substitute bytes") { WARN("Not implemented"); }
+    TEST_CASE("substitute bytes") {
+        auto state = state_t{1, 2, 3, 4};
+
+        constexpr auto expected =
+            state_t{0x6363637c, 0x63636377, 0x6363637b, 0x636363f2};
+        CHECK_EQ(AES<key128_t>::Encryption::substitute_bytes(state), expected);
+    }
     TEST_CASE("row shift") {
         auto state = state_t{1, 2, 3, 4};
 
@@ -34,7 +40,13 @@ TEST_SUITE("encrypt") {
 }
 
 TEST_SUITE("decrypt") {
-    TEST_CASE("substitute bytes") { WARN("Not implemented"); }
+    TEST_CASE("substitute bytes") {
+        auto state = state_t{1, 2, 3, 4};
+
+        constexpr auto expected =
+            state_t{0x52525209, 0x5252526a, 0x525252d5, 0x52525230};
+        CHECK_EQ(AES<key128_t>::Decryption::substitute_bytes(state), expected);
+    }
     TEST_CASE("row shift") {
         auto state = state_t{1, 0x200, 0x30000, 0x4000000};
 
