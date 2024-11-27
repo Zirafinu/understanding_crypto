@@ -30,7 +30,7 @@ template <typename KEY_T> class AES {
   public:
     using key_t = KEY_T;
     constexpr static auto ROUNDS = round_count();
-    using expanded_keys_t = std::array<state_t, ROUNDS>;
+    using expanded_keys_t = std::array<state_t, ROUNDS + 1>;
 
   public:
     struct Encryption {
@@ -199,9 +199,30 @@ template <typename KEY_T> class AES {
             return state;
         }
 
-        static expanded_keys_t expand_key(key_t &key) {
-            expanded_keys_t expanded;
+        static expanded_keys_t expand_key(const key_t &key) {
+            expanded_keys_t expanded{};
+            auto &linear_view = *reinterpret_cast<
+                std::array<uint32_t, (ROUNDS + 1) * sizeof(uint32_t)> *>(
+                &expanded);
+            constexpr auto N = key.size() / sizeof(uint32_t);
 
+            for (auto i = 0U; i < key.size(); ++i) {
+                linear_view[i / 4] <<= 8;
+                linear_view[i / 4] |= key[i];
+            }
+
+            auto round_key = 0x01;
+            for (auto i = N; i < linear_view.size(); ++i) {
+                auto tmp = linear_view[i - 1];
+                if ((i % N) == 0) {
+                    tmp = Encryption::substitute_word((tmp >> 24) | (tmp << 8));
+                    tmp ^= round_key << 24;
+                    round_key = GF_MULTIPLY(round_key, 2);
+                } else if ((N > 6) && ((i % N) == 4)) {
+                    tmp = Encryption::substitute_word(tmp);
+                }
+                linear_view[i] = linear_view[i - N] ^ tmp;
+            }
             return expanded;
         }
     };
