@@ -32,6 +32,19 @@ template <typename KEY_T> class AES {
     constexpr static auto ROUNDS = round_count();
     using expanded_keys_t = std::array<state_t, ROUNDS + 1>;
 
+    static void encrypt(state_t &data, const expanded_keys_t &keys) {
+        Common::add_round_key(data, keys[0]);
+        for (auto i = 1U; i < ROUNDS; ++i) {
+            Encryption::substitute_bytes(data);
+            Encryption::row_shift(data);
+            Encryption::mix_columns(data);
+            Common::add_round_key(data, keys[i]);
+        }
+        Encryption::substitute_bytes(data);
+        Encryption::row_shift(data);
+        Common::add_round_key(data, keys[ROUNDS]);
+    }
+
   public:
     struct Encryption {
         static state_t &row_shift(state_t &state) {
