@@ -208,15 +208,16 @@ template <typename KEY_T> class AES {
 
   public:
     static uint8_t GF_MULTIPLY(uint8_t value, uint8_t factor) {
+        uint_fast16_t compute = value;
         uint8_t result = (factor & 0x1) ? value : 0;
         while (factor > 1) {
-            value <<= 1;
+            compute <<= 1;
             factor >>= 1;
-            if (value & 0x100) {
-                value ^= 0x1b;
+            if (compute & 0x100) {
+                compute ^= 0x1b;
             }
             if (factor & 1) {
-                result ^= value;
+                result ^= compute;
             }
         }
         return result;
