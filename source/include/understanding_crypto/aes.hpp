@@ -233,7 +233,7 @@ class AES {
             expanded_keys_t expanded{};
             auto &linear_view = *reinterpret_cast<
                 std::array<uint32_t, ROUNDS * sizeof(uint32_t)> *>(&expanded);
-            constexpr auto N = key.size() / sizeof(uint32_t);
+            constexpr auto N = key_t::extent / sizeof(uint32_t);
 
             for (auto i = 0U; i < key.size(); ++i) {
                 linear_view[i / 4] <<= 8;
