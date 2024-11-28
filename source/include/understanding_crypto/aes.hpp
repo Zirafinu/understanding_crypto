@@ -15,8 +15,8 @@ using key256_t = std::span<uint8_t, 32>;
 
 using state_t = std::array<uint32_t, 4>;
 
-template <typename KEY_T> class AES {
-    consteval static int round_count() {
+class AES {
+    template <typename KEY_T> consteval static int round_count() {
         if constexpr (std::is_same_v<KEY_T, key128_t>)
             return 10;
         else if constexpr (std::is_same_v<KEY_T, key192_t>)
@@ -28,13 +28,11 @@ template <typename KEY_T> class AES {
     }
 
   public:
-    using key_t = KEY_T;
-    constexpr static auto ROUNDS = round_count();
-    using expanded_keys_t = std::array<state_t, ROUNDS + 1>;
-
+    template <typename expanded_keys_t>
     static void encrypt(state_t &data, const expanded_keys_t &keys) {
-        Common::add_round_key(data, keys[0]);
-        for (auto i = 1U; i < ROUNDS; ++i) {
+        Common::transpose(data);
+        Common::add_round_key(data, keys.front());
+        for (auto i = 1U; i < keys.size() - 1; ++i) {
             Encryption::substitute_bytes(data);
             Encryption::row_shift(data);
             Encryption::mix_columns(data);
@@ -42,7 +40,24 @@ template <typename KEY_T> class AES {
         }
         Encryption::substitute_bytes(data);
         Encryption::row_shift(data);
-        Common::add_round_key(data, keys[ROUNDS]);
+        Common::add_round_key(data, keys.back());
+        Common::transpose(data);
+    }
+
+    template <typename expanded_keys_t>
+    static void decrypt(state_t &data, const expanded_keys_t &keys) {
+        Common::transpose(data);
+        Common::add_round_key(data, keys.back());
+        Decryption::row_shift(data);
+        Decryption::substitute_bytes(data);
+        for (auto i = keys.size() - 2; i > 0; --i) {
+            Common::add_round_key(data, keys[i]);
+            Decryption::mix_columns(data);
+            Decryption::row_shift(data);
+            Decryption::substitute_bytes(data);
+        }
+        Common::add_round_key(data, keys.front());
+        Common::transpose(data);
     }
 
   public:
@@ -212,11 +227,12 @@ template <typename KEY_T> class AES {
             return state;
         }
 
-        static expanded_keys_t expand_key(const key_t &key) {
+        template <typename key_t> static auto expand_key(const key_t &key) {
+            constexpr auto ROUNDS = round_count<key_t>() + 1;
+            using expanded_keys_t = std::array<state_t, ROUNDS>;
             expanded_keys_t expanded{};
             auto &linear_view = *reinterpret_cast<
-                std::array<uint32_t, (ROUNDS + 1) * sizeof(uint32_t)> *>(
-                &expanded);
+                std::array<uint32_t, ROUNDS * sizeof(uint32_t)> *>(&expanded);
             constexpr auto N = key.size() / sizeof(uint32_t);
 
             for (auto i = 0U; i < key.size(); ++i) {
@@ -235,6 +251,10 @@ template <typename KEY_T> class AES {
                     tmp = Encryption::substitute_word(tmp);
                 }
                 linear_view[i] = linear_view[i - N] ^ tmp;
+            }
+
+            for (auto &key : expanded) {
+                transpose(key);
             }
             return expanded;
         }

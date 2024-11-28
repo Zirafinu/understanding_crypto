@@ -5,23 +5,29 @@ namespace understanding_crypto::aes {
 
 TEST_SUITE("examples") {
     TEST_CASE("encrypt block") {
-        uint8_t data_0[] = {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d,
-                            0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34};
         uint8_t key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
                          0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
         key128_t key_s{key};
-        auto expanded = AES<key128_t>::Common::expand_key(key_s);
-        for (auto &key : expanded) {
-            AES<key128_t>::Common::transpose(key);
-        }
+        auto expanded = AES::Common::expand_key(key_s);
         state_t data = {0x3243f6a8, 0x885a308d, 0x313198a2, 0xe0370734};
-        AES<key128_t>::Common::transpose(data);
-        AES<key128_t>::encrypt(data, expanded);
-        constexpr state_t expected = {0x3902dc19, 0x25dc116a, 0x8409850b,
-                                      0x1dfb9732};
+        AES::encrypt(data, expanded);
+
+        constexpr state_t expected = {0x3925841d, 0x02dc09fb, 0xdc118597,
+                                      0x196a0b32};
         CHECK_EQ(data, expected);
     }
-    TEST_CASE("decrypt block") { WARN("Not implemented"); }
+    TEST_CASE("decrypt block") {
+        uint8_t key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+                         0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+        key128_t key_s{key};
+        auto expanded = AES::Common::expand_key(key_s);
+        state_t data = {0x3925841d, 0x02dc09fb, 0xdc118597, 0x196a0b32};
+        AES::decrypt(data, expanded);
+
+        constexpr state_t expected = {0x3243f6a8, 0x885a308d, 0x313198a2,
+                                      0xe0370734};
+        CHECK_EQ(data, expected);
+    }
 }
 
 TEST_SUITE("encrypt") {
@@ -30,20 +36,20 @@ TEST_SUITE("encrypt") {
 
         constexpr auto expected =
             state_t{0x6363637c, 0x63636377, 0x6363637b, 0x636363f2};
-        CHECK_EQ(AES<key128_t>::Encryption::substitute_bytes(state), expected);
+        CHECK_EQ(AES::Encryption::substitute_bytes(state), expected);
     }
     TEST_CASE("row shift") {
         auto state = state_t{0x01020304, 0x02030405, 0x03040506, 0x04050607};
 
         constexpr auto expected =
             state_t{0x01020304, 0x03040502, 0x05060304, 0x07040506};
-        CHECK_EQ(AES<key128_t>::Encryption::row_shift(state), expected);
+        CHECK_EQ(AES::Encryption::row_shift(state), expected);
     }
     TEST_CASE("column mix") {
         auto state = state_t{1, 2, 3, 4};
 
         constexpr auto expected = state_t{3, 4, 9, 10};
-        CHECK_EQ(AES<key128_t>::Encryption::mix_columns(state), expected);
+        CHECK_EQ(AES::Encryption::mix_columns(state), expected);
     }
 }
 
@@ -53,20 +59,20 @@ TEST_SUITE("decrypt") {
 
         constexpr auto expected =
             state_t{0x52525209, 0x5252526a, 0x525252d5, 0x52525230};
-        CHECK_EQ(AES<key128_t>::Decryption::substitute_bytes(state), expected);
+        CHECK_EQ(AES::Decryption::substitute_bytes(state), expected);
     }
     TEST_CASE("row shift") {
         auto state = state_t{0x01020304, 0x03040502, 0x05060304, 0x07040506};
 
         constexpr auto expected =
             state_t{0x01020304, 0x02030405, 0x03040506, 0x04050607};
-        CHECK_EQ(AES<key128_t>::Decryption::row_shift(state), expected);
+        CHECK_EQ(AES::Decryption::row_shift(state), expected);
     }
     TEST_CASE("column mix") {
         auto state = state_t{3, 4, 9, 10};
 
         constexpr auto expected = state_t{1, 2, 3, 4};
-        CHECK_EQ(AES<key128_t>::Decryption::mix_columns(state), expected);
+        CHECK_EQ(AES::Decryption::mix_columns(state), expected);
     }
 }
 
@@ -75,14 +81,14 @@ TEST_SUITE("common") {
         uint8_t key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
                          0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
         key128_t key_s{key};
-        const auto expanded = AES<key128_t>::Common::expand_key(key_s);
+        const auto expanded = AES::Common::expand_key(key_s);
 
-        auto expected_0 =
-            state_t{0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c};
-        auto expected_1 =
-            state_t{0xa0fafe17, 0x88542cb1, 0x23a33939, 0x2a6c7605};
-        auto expected_10 =
-            state_t{0xd014f9a8, 0xc9ee2589, 0xe13f0cc8, 0xb6630ca6};
+        constexpr auto expected_0 =
+            state_t{0x2b28ab09, 0x7eaef7cf, 0x15d2154f, 0x16a6883c};
+        constexpr auto expected_1 =
+            state_t{0xa088232a, 0xfa54a36c, 0xfe2c3976, 0x17b13905};
+        constexpr auto expected_10 =
+            state_t{0xd0c9e1b6, 0x14ee3f63, 0xf9250c0c, 0xa889c8a6};
         CHECK_EQ(expanded[0], expected_0);
         CHECK_EQ(expanded[1], expected_1);
         CHECK_EQ(expanded[10], expected_10);
@@ -92,14 +98,14 @@ TEST_SUITE("common") {
                          0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
                          0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b};
         key192_t key_s{key};
-        const auto expanded = AES<key192_t>::Common::expand_key(key_s);
+        const auto expanded = AES::Common::expand_key(key_s);
 
-        auto expected_0 =
-            state_t{0x8e73b0f7, 0xda0e6452, 0xc810f32b, 0x809079e5};
-        auto expected_1 =
-            state_t{0x62f8ead2, 0x522c6b7b, 0xfe0c91f7, 0x2402f5a5};
-        auto expected_12 =
-            state_t{0xe98ba06f, 0x448c773c, 0x8ecc7204, 0x01002202};
+        constexpr auto expected_0 =
+            state_t{0x8edac880, 0x730e1090, 0xb064f379, 0xf7522be5};
+        constexpr auto expected_1 =
+            state_t{0x6252fe24, 0xf82c0c02, 0xea6b91f5, 0xd27bf7a5};
+        constexpr auto expected_12 =
+            state_t{0xe9448e01, 0x8b8ccc00, 0xa0777222, 0x6f3c0402};
         CHECK_EQ(expanded[0], expected_0);
         CHECK_EQ(expanded[1], expected_1);
         CHECK_EQ(expanded[12], expected_12);
@@ -110,14 +116,14 @@ TEST_SUITE("common") {
                          0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
                          0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
         key256_t key_s{key};
-        const auto expanded = AES<key256_t>::Common::expand_key(key_s);
+        const auto expanded = AES::Common::expand_key(key_s);
 
-        auto expected_0 =
-            state_t{0x603deb10, 0x15ca71be, 0x2b73aef0, 0x857d7781};
-        auto expected_1 =
-            state_t{0x1f352c07, 0x3b6108d7, 0x2d9810a3, 0x0914dff4};
-        auto expected_14 =
-            state_t{0xfe4890d1, 0xe6188d0b, 0x046df344, 0x706c631e};
+        constexpr auto expected_0 =
+            state_t{0x60152b85, 0x3dca737d, 0xeb71ae77, 0x10bef081};
+        constexpr auto expected_1 =
+            state_t{0x1f3b2d09, 0x35619814, 0x2c0810df, 0x07d7a3f4};
+        constexpr auto expected_14 =
+            state_t{0xfee60470, 0x48186d6c, 0x908df363, 0xd10b441e};
         CHECK_EQ(expanded[0], expected_0);
         CHECK_EQ(expanded[1], expected_1);
         CHECK_EQ(expanded[14], expected_14);
@@ -126,14 +132,14 @@ TEST_SUITE("common") {
         state_t state = {0x01020304, 0x05060708, 0x090a0b0c, 0x0d0e0f10};
         constexpr auto expected =
             state_t{0x0105090d, 0x02060a0e, 0x03070b0f, 0x04080c10};
-        CHECK_EQ(AES<key128_t>::Common::transpose(state), expected);
+        CHECK_EQ(AES::Common::transpose(state), expected);
     }
     TEST_CASE("add round key") {
         auto state = state_t{1, 2, 3, 4};
         constexpr auto key = state_t{4, 3, 2, 1};
 
         constexpr auto expected = state_t{5, 1, 1, 5};
-        CHECK_EQ(AES<key128_t>::Common::add_round_key(state, key), expected);
+        CHECK_EQ(AES::Common::add_round_key(state, key), expected);
     }
 }
 } // namespace understanding_crypto::aes
