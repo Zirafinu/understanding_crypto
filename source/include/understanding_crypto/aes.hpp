@@ -15,6 +15,13 @@ using key256_t = std::span<uint8_t, 32>;
 
 using state_t = std::array<uint32_t, 4>;
 
+template <std::ranges::sized_range R>
+constexpr auto to_state_t(R &&r) -> state_t {
+    state_t result;
+    std::copy(r.begin(), r.end(), result.begin());
+    return result;
+}
+
 class AES {
     template <typename KEY_T> consteval static int round_count() {
         if constexpr (std::is_same_v<KEY_T, key128_t>)
@@ -70,30 +77,15 @@ class AES {
         }
 
         static state_t &mix_columns(state_t &state) {
-            state_t last_state = state;
-            std::fill(state.begin(), state.end(), 0U);
-            for (auto i = 0U; i < sizeof(state[0]); ++i) {
-                state[0] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 2) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 3) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 1))
-                            << (8 * i);
-                state[1] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 2) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 3) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 1))
-                            << (8 * i);
-                state[2] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 2) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 3))
-                            << (8 * i);
-                state[3] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 3) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 1) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 2))
-                            << (8 * i);
-            }
+            const auto x1 = state;
+            const auto x2 =
+                to_state_t(x1 | std::views::transform(GF_MULTIPLY_SIMDx2));
+            const auto all_x1 = x1[0] ^ x1[1] ^ x1[2] ^ x1[3];
+            // [0]*0x2 [1]*0x3 [2]*0x1 [3]*0x1
+            state[0] = all_x1 ^ x1[0] ^ x2[0] ^ x2[1];
+            state[1] = all_x1 ^ x1[1] ^ x2[1] ^ x2[2];
+            state[2] = all_x1 ^ x1[2] ^ x2[2] ^ x2[3];
+            state[3] = all_x1 ^ x1[3] ^ x2[3] ^ x2[0];
             return state;
         }
 
@@ -149,30 +141,28 @@ class AES {
         }
 
         static state_t &mix_columns(state_t &state) {
-            state_t last_state = state;
-            std::fill(state.begin(), state.end(), 0U);
-            for (auto i = 0U; i < sizeof(state[0]); ++i) {
-                state[0] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 0xE) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 0xB) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 0xD) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 0x9))
-                            << (8 * i);
-                state[1] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 0x9) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 0xE) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 0xB) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 0xD))
-                            << (8 * i);
-                state[2] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 0xD) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 0x9) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 0xE) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 0xB))
-                            << (8 * i);
-                state[3] |= (GF_MULTIPLY(last_state[0] >> (8 * i), 0xB) ^
-                             GF_MULTIPLY(last_state[1] >> (8 * i), 0xD) ^
-                             GF_MULTIPLY(last_state[2] >> (8 * i), 0x9) ^
-                             GF_MULTIPLY(last_state[3] >> (8 * i), 0xE))
-                            << (8 * i);
-            }
+            state_t x1 = state;
+            state_t x2 =
+                to_state_t(x1 | std::views::transform(GF_MULTIPLY_SIMDx2));
+            state_t x4 =
+                to_state_t(x2 | std::views::transform(GF_MULTIPLY_SIMDx2));
+            state_t x8 =
+                to_state_t(x4 | std::views::transform(GF_MULTIPLY_SIMDx2));
+            auto const all_x9 =
+                x1[0] ^ x1[1] ^ x1[2] ^ x1[3] ^ x8[0] ^ x8[1] ^ x8[2] ^ x8[3];
+
+            state_t x6 = to_state_t(
+                std::ranges::zip_transform_view(std::bit_xor(), x4, x2));
+            static_assert(0xE == 0b1110);
+            static_assert(0xB == 0b1011);
+            static_assert(0xD == 0b1101);
+            static_assert(0x9 == 0b1001);
+
+            // [0]*0xE [1]*0xB [2]*0xD [3]*0x9
+            state[0] = all_x9 ^ x1[0] ^ x6[0] ^ x2[1] ^ x4[2];
+            state[1] = all_x9 ^ x1[1] ^ x6[1] ^ x2[2] ^ x4[3];
+            state[2] = all_x9 ^ x1[2] ^ x6[2] ^ x2[3] ^ x4[0];
+            state[3] = all_x9 ^ x1[3] ^ x6[3] ^ x2[0] ^ x4[1];
             return state;
         }
 
@@ -285,6 +275,14 @@ class AES {
                 result ^= compute;
             }
         }
+        return result;
+    }
+
+    [[gnu::hot, gnu::always_inline]]
+    static constexpr uint32_t GF_MULTIPLY_SIMDx2(uint32_t value) {
+        const uint32_t mask = 0x80808080U;
+        const auto extended = ((value & mask) >> 7) * 0x1b;
+        const auto result = ((value & ~mask) << 1) ^ extended;
         return result;
     }
 };
