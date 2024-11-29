@@ -9,13 +9,46 @@
         {
             "name": "default",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build"
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE":{ "value": "Release" }
+            }
+        },
+        {
+            "name": "coverage",
+            "inherits": "default",
+            "cacheVariables": {
+                "COVERAGE": { "value":"On" },
+                "CMAKE_CXX_COMPILER": { "value": "g++" },
+                "CMAKE_BUILD_TYPE": { "value": "Debug" },
+                "CMAKE_CXX_FLAGS": { "value": "-coverage"},
+                "CMAKE_EXE_LINKER_FLAGS": { "value": "-coverage"}
+            }
+        },
+        {
+            "name": "performance",
+            "inherits": "default",
+            "cacheVariables": {
+                "PERFORMANCE": { "value":"On" },
+                "CMAKE_CXX_COMPILER": { "value": "g++" },
+                "CMAKE_BUILD_TYPE": { "value": "Release" },
+                "CMAKE_CXX_FLAGS": { "value": "-g -pg"},
+                "CMAKE_EXE_LINKER_FLAGS": { "value": "-g -pg"}
+            }
         }
     ],
     "buildPresets": [
         {
             "name": "default",
             "configurePreset": "default"
+        },
+        {
+            "name": "coverage",
+            "configurePreset": "coverage"
+        },
+        {
+            "name": "performance",
+            "configurePreset": "performance"
         }
     ],
     "testPresets": [
@@ -23,24 +56,41 @@
             "name": "default",
             "configurePreset": "default",
             "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "coverage",
+            "configurePreset": "coverage",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "performance",
+            "configurePreset": "performance",
+            "output": {"outputOnFailure": true}
         }
     ],
     "workflowPresets": [
         {
             "name": "default",
             "steps": [
-                {
-                    "type": "configure",
-                    "name": "default"
-                },
-                {
-                    "type": "build",
-                    "name": "default"
-                },
-                {
-                    "type": "test",
-                    "name": "default"
-                }
+                { "type": "configure", "name": "default" },
+                { "type": "build",     "name": "default" },
+                { "type": "test",      "name": "default" }
+            ]
+        },
+        {
+            "name": "coverage",
+            "steps": [
+                { "type": "configure", "name": "coverage" },
+                { "type": "build",     "name": "coverage" },
+                { "type": "test",      "name": "coverage" }
+            ]
+        },
+        {
+            "name": "performance",
+            "steps": [
+                { "type": "configure", "name": "performance" },
+                { "type": "build",     "name": "performance" },
+                { "type": "test",      "name": "performance" }
             ]
         }
     ]
