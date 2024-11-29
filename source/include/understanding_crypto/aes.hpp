@@ -165,7 +165,7 @@ class AES {
             return result;
         }
 
-        static state_t substitute_bytes(state_t &state) {
+        static state_t &substitute_bytes(state_t &state) {
             for (auto &word : state) {
                 word = substitute_word(word);
             }
