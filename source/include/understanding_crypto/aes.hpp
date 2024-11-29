@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <ranges>
 #include <span>
 
 namespace understanding_crypto::aes {
@@ -14,13 +13,6 @@ using key192_t = std::span<uint8_t, 24>;
 using key256_t = std::span<uint8_t, 32>;
 
 using state_t = std::array<uint32_t, 4>;
-
-template <std::ranges::sized_range R>
-constexpr auto to_state_t(R &&r) -> state_t {
-    state_t result;
-    std::copy(r.begin(), r.end(), result.begin());
-    return result;
-}
 
 class AES {
     template <typename KEY_T> consteval static int round_count() {
