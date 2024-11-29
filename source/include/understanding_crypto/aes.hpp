@@ -228,13 +228,13 @@ class AES {
                 linear_view[i / 4] |= key[i];
             }
 
-            auto round_key = 0x01;
+            auto round_key = 0x01000000;
             for (auto i = N; i < linear_view.size(); ++i) {
                 auto tmp = linear_view[i - 1];
                 if ((i % N) == 0) {
                     tmp = Encryption::substitute_word((tmp >> 24) | (tmp << 8));
-                    tmp ^= round_key << 24;
-                    round_key = GF_MULTIPLY(round_key, 2);
+                    tmp ^= round_key;
+                    round_key = GF_MULTIPLY_SIMDx2(round_key);
                 } else if ((N > 6) && ((i % N) == 4)) {
                     tmp = Encryption::substitute_word(tmp);
                 }
@@ -260,22 +260,6 @@ class AES {
     };
 
   public:
-    static uint8_t GF_MULTIPLY(uint8_t value, uint8_t factor) {
-        uint_fast16_t compute = value;
-        uint8_t result = (factor & 0x1) ? value : 0;
-        while (factor > 1) {
-            compute <<= 1;
-            factor >>= 1;
-            if (compute & 0x100) {
-                compute ^= 0x1b;
-            }
-            if (factor & 1) {
-                result ^= compute;
-            }
-        }
-        return result;
-    }
-
     [[gnu::hot, gnu::always_inline]]
     static constexpr uint32_t GF_MULTIPLY_SIMDx2(uint32_t value) {
         const uint32_t mask = 0x80808080U;
