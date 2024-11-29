@@ -76,26 +76,29 @@ class AES {
             return state;
         }
 
-        static state_t &mix_columns(state_t &state) {
-            const auto x1 = state;
-            const auto x2 =
-                to_state_t(x1 | std::views::transform(GF_MULTIPLY_SIMDx2));
-            const auto all_x1 = x1[0] ^ x1[1] ^ x1[2] ^ x1[3];
+        static state_t &mix_columns(state_t &x1) {
+            state_t x2;
+            uint32_t all_x1 = 0;
+            for (int i = 0; i < 4; ++i) {
+                all_x1 ^= x1[i];
+                x2[i] = GF_MULTIPLY_SIMDx2(x1[i]);
+            }
+
             // [0]*0x2 [1]*0x3 [2]*0x1 [3]*0x1
-            state[0] = all_x1 ^ x1[0] ^ x2[0] ^ x2[1];
-            state[1] = all_x1 ^ x1[1] ^ x2[1] ^ x2[2];
-            state[2] = all_x1 ^ x1[2] ^ x2[2] ^ x2[3];
-            state[3] = all_x1 ^ x1[3] ^ x2[3] ^ x2[0];
-            return state;
+            x1[0] = all_x1 ^ x1[0] ^ x2[0] ^ x2[1];
+            x1[1] = all_x1 ^ x1[1] ^ x2[1] ^ x2[2];
+            x1[2] = all_x1 ^ x1[2] ^ x2[2] ^ x2[3];
+            x1[3] = all_x1 ^ x1[3] ^ x2[3] ^ x2[0];
+            return x1;
         }
 
         static uint32_t substitute_word(uint32_t word) {
-            auto &bytes =
-                *reinterpret_cast<std::array<uint8_t, sizeof(word)> *>(&word);
-            for (auto &byte : bytes) {
-                byte = sbox[byte];
+            uint32_t result = 0;
+            for (auto i = 24; i >= 0; i -= 8) {
+                result <<= 8;
+                result |= sbox[uint8_t(word >> i)];
             }
-            return word;
+            return result;
         }
 
         static state_t &substitute_bytes(state_t &state) {
@@ -140,39 +143,34 @@ class AES {
             return state;
         }
 
-        static state_t &mix_columns(state_t &state) {
-            state_t x1 = state;
-            state_t x2 =
-                to_state_t(x1 | std::views::transform(GF_MULTIPLY_SIMDx2));
-            state_t x4 =
-                to_state_t(x2 | std::views::transform(GF_MULTIPLY_SIMDx2));
-            state_t x8 =
-                to_state_t(x4 | std::views::transform(GF_MULTIPLY_SIMDx2));
-            auto const all_x9 =
-                x1[0] ^ x1[1] ^ x1[2] ^ x1[3] ^ x8[0] ^ x8[1] ^ x8[2] ^ x8[3];
-
-            state_t x6 = to_state_t(
-                std::ranges::zip_transform_view(std::bit_xor(), x4, x2));
-            static_assert(0xE == 0b1110);
-            static_assert(0xB == 0b1011);
-            static_assert(0xD == 0b1101);
-            static_assert(0x9 == 0b1001);
+        static state_t &mix_columns(state_t &x1) {
+            state_t x2;
+            state_t x4;
+            state_t x6;
+            uint32_t all_x9 = 0;
+            for (int i = 0; i < 4; ++i) {
+                all_x9 ^= x1[i];
+                x2[i] = GF_MULTIPLY_SIMDx2(x1[i]);
+                x4[i] = GF_MULTIPLY_SIMDx2(x2[i]);
+                x6[i] = x2[i] ^ x4[i];
+                all_x9 ^= GF_MULTIPLY_SIMDx2(x4[i]);
+            }
 
             // [0]*0xE [1]*0xB [2]*0xD [3]*0x9
-            state[0] = all_x9 ^ x1[0] ^ x6[0] ^ x2[1] ^ x4[2];
-            state[1] = all_x9 ^ x1[1] ^ x6[1] ^ x2[2] ^ x4[3];
-            state[2] = all_x9 ^ x1[2] ^ x6[2] ^ x2[3] ^ x4[0];
-            state[3] = all_x9 ^ x1[3] ^ x6[3] ^ x2[0] ^ x4[1];
-            return state;
+            x1[0] = all_x9 ^ x1[0] ^ x6[0] ^ x2[1] ^ x4[2];
+            x1[1] = all_x9 ^ x1[1] ^ x6[1] ^ x2[2] ^ x4[3];
+            x1[2] = all_x9 ^ x1[2] ^ x6[2] ^ x2[3] ^ x4[0];
+            x1[3] = all_x9 ^ x1[3] ^ x6[3] ^ x2[0] ^ x4[1];
+            return x1;
         }
 
         static uint32_t substitute_word(uint32_t word) {
-            auto &bytes =
-                *reinterpret_cast<std::array<uint8_t, sizeof(word)> *>(&word);
-            for (auto &byte : bytes) {
-                byte = sbox[byte];
+            uint32_t result = 0;
+            for (auto i = 24; i >= 0; i -= 8) {
+                result <<= 8;
+                result |= sbox[uint8_t(word >> i)];
             }
-            return word;
+            return result;
         }
 
         static state_t substitute_bytes(state_t &state) {
@@ -211,8 +209,8 @@ class AES {
 
     struct Common {
         static state_t &add_round_key(state_t &state, const state_t &key) {
-            for (const auto [word, key] : std::views::zip(state, key)) {
-                word ^= key;
+            for (auto i = 0U; i < 4; ++i) {
+                state[i] ^= key[i];
             }
             return state;
         }
@@ -250,7 +248,7 @@ class AES {
         }
 
         static state_t &transpose(state_t &state) {
-            auto copy = state;
+            const auto copy = state;
             for (auto i = 0U; i < state.size(); ++i) {
                 state[3 - i] = (((copy[0] >> (8 * i)) & 0xFF) << 24) |
                                (((copy[1] >> (8 * i)) & 0xFF) << 16) |
