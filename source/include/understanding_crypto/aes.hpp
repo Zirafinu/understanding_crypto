@@ -71,7 +71,7 @@ class AES {
         static state_t &mix_columns(state_t &x1) {
             state_t x2;
             uint32_t all_x1 = 0;
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < x1.size(); ++i) {
                 all_x1 ^= x1[i];
                 x2[i] = GF_MULTIPLY_SIMDx2(x1[i]);
             }
@@ -140,7 +140,7 @@ class AES {
             state_t x4;
             state_t x6;
             uint32_t all_x9 = 0;
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < x1.size(); ++i) {
                 all_x9 ^= x1[i];
                 x2[i] = GF_MULTIPLY_SIMDx2(x1[i]);
                 x4[i] = GF_MULTIPLY_SIMDx2(x2[i]);
@@ -201,7 +201,7 @@ class AES {
 
     struct Common {
         static state_t &add_round_key(state_t &state, const state_t &key) {
-            for (auto i = 0U; i < 4; ++i) {
+            for (auto i = 0U; i < state.size(); ++i) {
                 state[i] ^= key[i];
             }
             return state;
@@ -216,8 +216,8 @@ class AES {
             constexpr auto N = key_t::extent / sizeof(uint32_t);
 
             for (auto i = 0U; i < key.size(); ++i) {
-                linear_view[i / 4] <<= 8;
-                linear_view[i / 4] |= key[i];
+                linear_view[i / sizeof(uint32_t)] <<= 8;
+                linear_view[i / sizeof(uint32_t)] |= key[i];
             }
 
             auto round_key = 0x01000000;
@@ -242,10 +242,11 @@ class AES {
         static state_t &transpose(state_t &state) {
             const auto copy = state;
             for (auto i = 0U; i < state.size(); ++i) {
-                state[3 - i] = (((copy[0] >> (8 * i)) & 0xFF) << 24) |
-                               (((copy[1] >> (8 * i)) & 0xFF) << 16) |
-                               (((copy[2] >> (8 * i)) & 0xFF) << 8) |
-                               (((copy[3] >> (8 * i)) & 0xFF) << 0);
+                state[state.size() - 1 - i] =
+                    (((copy[0] >> (8 * i)) & 0xFF) << 24) |
+                    (((copy[1] >> (8 * i)) & 0xFF) << 16) |
+                    (((copy[2] >> (8 * i)) & 0xFF) << 8) |
+                    (((copy[3] >> (8 * i)) & 0xFF) << 0);
             }
             return state;
         }
