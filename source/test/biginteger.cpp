@@ -61,10 +61,8 @@ TEST_SUITE("with integer types") {
         a.internal_main[0] = 0x1000'1000'1000'1000ULL;
         a.internal_main[1] = 0x1000'1000'1000'1000ULL;
         const uint_t<128> b = a * 0x1'0001ULL;
-        CHECK_EQ(b[0],
-                 size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'0000ULL));
-        CHECK_EQ(b[1],
-                 size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'1000ULL));
+        CHECK_EQ(b[0], size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'0000ULL));
+        CHECK_EQ(b[1], size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'1000ULL));
         uint_t<128> c{};
         c.internal_main[0] = ~size_t(0);
         c.internal_main[1] = ~size_t(0);
@@ -72,8 +70,7 @@ TEST_SUITE("with integer types") {
         CHECK_EQ(d[0], 0x0000'0000'0000'0001);
         CHECK_EQ(d[1], 0xffff'ffff'ffff'ffff);
 
-        const auto e =
-            uint_t<256>::from_multiplication_of(c, uint_t<64>(~size_t(0)));
+        const auto e = uint_t<256>::from_multiplication_of(c, uint_t<64>(~size_t(0)));
         CHECK_EQ(e[0], 0x0000'0000'0000'0001);
         CHECK_EQ(e[1], 0xffff'ffff'ffff'ffff);
         CHECK_EQ(e[2], 0xffff'ffff'ffff'fffe);
