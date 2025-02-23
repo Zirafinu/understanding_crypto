@@ -136,28 +136,34 @@ template <std::size_t BITS> struct uint_t {
                 return lhs == rhs;
             } else if constexpr (operation == Compare_Operation::GREATER) {
                 return lhs > rhs;
+            } else if constexpr (operation == Compare_Operation::LESS) {
+                return lhs < rhs;
+            } else if constexpr (operation == Compare_Operation::GREATER_EQUAL) {
+                return lhs >= rhs;
+            } else if constexpr (operation == Compare_Operation::LESS_EQUAL) {
+                return lhs <= rhs;
             }
         };
 
-        for (size_t i = 0U; i < min_index; ++i) {
-            const bool compare = apply(lhs[i], rhs[i]);
-            if (!compare)
-                return false;
+        for (size_t i = max_index - 1; i > (min_index - 1); ++i) {
+            if constexpr (max_index == lhs_t::word_count) {
+                if (lhs[i] == 0)
+                    continue;
+                return apply(lhs[i], 0);
+            } else {
+                if (rhs[i] == 0)
+                    continue;
+                return apply(0, rhs[i]);
+            }
         }
 
-        for (size_t i = min_index; i < compute_word_count; ++i) {
-            bool compare if constexpr (longer_word_count == rhs_t::word_count) {
-                lhs_v = 0;
-                rhs_v = rhs[i];
-            }
-            else {
-                lhs_v = lhs[i];
-                rhs_v = 0;
-            }
-            if constexpr (operation == Binary_Operation::ADDITION) {
-                res[i] += carry;
-                carry = res[i] < carry;
-            }
+        for (size_t i = min_index - 1; i < min_index; --i) {
+            if (lhs[i] == rhs[i])
+                continue;
+            return apply(lhs[i], rhs[i]);
+        }
+        if constexpr (operation == Compare_Operation::GREATER || operation == Compare_Operation::LESS) {
+            return false;
         }
         return true;
     }
@@ -316,15 +322,35 @@ auto operator^(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
     return res_t::template from_binary_operation_on<res_t::Binary_Operation::XOR>(lhs, rhs);
 }
 
-template <std::size_t lhs_bits> auto operator==(uint_t<lhs_bits> const &lhs, std::integral auto rhs) {
-    using rhs_t = uint_t<sizeof(decltype(rhs)) * 8>;
-    return lhs == rhs_t(rhs);
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator<(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
+    return res_t::template compare<res_t::Compare_Operation::LESS>(lhs, rhs);
 }
-
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator>(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
+    return res_t::template compare<res_t::Compare_Operation::GREATER>(lhs, rhs);
+}
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator<=(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
+    return res_t::template compare<res_t::Compare_Operation::LESS_EQUAL>(lhs, rhs);
+}
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator>=(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
+    return res_t::template compare<res_t::Compare_Operation::GREATER_EQUAL>(lhs, rhs);
+}
 template <std::size_t lhs_bits, std::size_t rhs_bits>
 auto operator==(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
     using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
-    return res_t::template from_binary_operation_on<res_t::Binary_Operation::EQUALS>(lhs, rhs);
+    return res_t::template compare<res_t::Compare_Operation::EQUALS>(lhs, rhs);
+}
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator!=(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
+    return !res_t::template compare<res_t::Compare_Operation::EQUALS>(lhs, rhs);
 }
 
 } // namespace understanding_crypto

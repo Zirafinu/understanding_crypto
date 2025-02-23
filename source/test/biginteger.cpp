@@ -63,6 +63,7 @@ TEST_SUITE("with integer types") {
         const uint_t<128> b = a * 0x1'0001ULL;
         CHECK_EQ(b[0], size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'0000ULL));
         CHECK_EQ(b[1], size_t(0x1000'1000'1000'1000ULL + 0x1000'1000'1000'1000ULL));
+
         uint_t<128> c{};
         c.internal_main[0] = ~size_t(0);
         c.internal_main[1] = ~size_t(0);
@@ -85,6 +86,26 @@ TEST_SUITE("with integer types") {
         CHECK_EQ(res_and[0], 0x00020200U);
         CHECK_EQ(res_or[0], 0x05030305U);
         CHECK_EQ(res_xor[0], 0x05010105U);
+    }
+    TEST_CASE("compare") {
+        const uint_t<128> a = 0x0102030405060708ULL;
+        const uint_t<128> b = 0x1020304050607080ULL;
+        CHECK_EQ(a < b, true);
+        CHECK_EQ(b < a, false);
+        CHECK_EQ(a < a, false);
+        CHECK_EQ(a > b, false);
+        CHECK_EQ(b > a, true);
+        CHECK_EQ(a > a, false);
+        CHECK_EQ(a <= b, true);
+        CHECK_EQ(b <= a, false);
+        CHECK_EQ(a <= a, true);
+        CHECK_EQ(a >= b, false);
+        CHECK_EQ(b >= a, true);
+        CHECK_EQ(a >= a, true);
+        CHECK_EQ(a == b, false);
+        CHECK_EQ(a == a, true);
+        CHECK_EQ(a != b, true);
+        CHECK_EQ(a != a, false);
     }
 }
 
