@@ -2,6 +2,7 @@
 #define UNDERSTANDING_CRYPTO_BIG_INT_H
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -79,6 +80,51 @@ template <std::size_t BITS> struct uint_t {
         }
         trim();
         return *this;
+    }
+
+    template <bool shift_left, size_t lhs_bits>
+    constexpr static this_t from_shift_by(uint_t<lhs_bits> const &lhs, std::integral auto rhs) {
+        if constexpr (std::is_signed_v<decltype(rhs)>) {
+            if (rhs < 0) {
+                return from_shift_by<!shift_left>(lhs, size_t(-rhs));
+            }
+        }
+
+        using lhs_t = uint_t<lhs_bits>;
+        using res_t = this_t;
+        res_t res{0};
+
+        if (rhs > lhs_bits || rhs > bit_count) {
+            return res;
+        }
+
+        constexpr size_t max_length = std::min(lhs_bits, bit_count) / bits_in_word;
+        size_t word_shift = rhs / bits_in_word;
+        size_t in_word_shift = rhs % bits_in_word;
+        if ((rhs % bits_in_word) == 0) {
+            if constexpr (shift_left) {
+                std::copy_n(lhs.internal_main.begin(), max_length - word_shift,
+                            res.internal_main.begin() + word_shift);
+            } else {
+                std::copy_n(lhs.internal_main.begin() + word_shift, max_length, res.internal_main.begin());
+            }
+        } else {
+            size_t carry = 0;
+            if constexpr (shift_left) {
+                for (size_t i = 0; i < max_length - word_shift; ++i) {
+                    res[i + word_shift] = carry | (lhs[i] << in_word_shift);
+                    carry = lhs[i] >> (bits_in_word - in_word_shift);
+                }
+            } else {
+                for (ssize_t i = max_length - word_shift - 1; i >= 0; --i) {
+                    res[i] = carry | (lhs[i + word_shift] >> in_word_shift);
+                    carry = lhs[i + word_shift] << (bits_in_word - in_word_shift);
+                }
+            }
+        }
+
+        res.trim();
+        return res;
     }
 
     template <size_t lhs_bits, size_t rhs_bits>
@@ -320,6 +366,34 @@ template <std::size_t lhs_bits, std::size_t rhs_bits>
 auto operator^(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
     using res_t = uint_t<std::max(lhs_bits, rhs_bits)>;
     return res_t::template from_binary_operation_on<res_t::Binary_Operation::XOR>(lhs, rhs);
+}
+
+template <std::size_t lhs_bits> auto operator>>(uint_t<lhs_bits> const &lhs, std::integral auto rhs) {
+    using res_t = std::remove_cvref_t<decltype(lhs)>;
+    return res_t::template from_shift_by<false, lhs_bits>(lhs, rhs);
+}
+
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator>>(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = std::remove_cvref_t<decltype(lhs)>;
+    if (rhs > lhs_bits) {
+        return res_t{0};
+    }
+    return res_t::template from_shift_by<false, lhs_bits>(lhs, rhs.internal_main[0]);
+}
+
+template <std::size_t lhs_bits> auto operator<<(uint_t<lhs_bits> const &lhs, std::integral auto rhs) {
+    using res_t = std::remove_cvref_t<decltype(lhs)>;
+    return res_t::template from_shift_by<true, lhs_bits>(lhs, rhs);
+}
+
+template <std::size_t lhs_bits, std::size_t rhs_bits>
+auto operator<<(uint_t<lhs_bits> const &lhs, uint_t<rhs_bits> const &rhs) {
+    using res_t = std::remove_cvref_t<decltype(lhs)>;
+    if (rhs > lhs_bits) {
+        return res_t{0};
+    }
+    return res_t::template from_shift_by<true, lhs_bits>(lhs, rhs.internal_main[0]);
 }
 
 template <std::size_t lhs_bits, std::size_t rhs_bits>

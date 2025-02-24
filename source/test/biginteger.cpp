@@ -71,13 +71,13 @@ TEST_SUITE("with integer types") {
         CHECK_EQ(d[0], 0x0000'0000'0000'0001);
         CHECK_EQ(d[1], 0xffff'ffff'ffff'ffff);
 
-        const auto e = uint_t<256>::from_multiplication_of(c, uint_t<64>(~size_t(0)));
+        const auto e = uint_t<256>::from_multiplication_of(c, uint_t<64>(~uint64_t(0)));
         CHECK_EQ(e[0], 0x0000'0000'0000'0001);
         CHECK_EQ(e[1], 0xffff'ffff'ffff'ffff);
         CHECK_EQ(e[2], 0xffff'ffff'ffff'fffe);
         CHECK_EQ(e[3], 0x0000'0000'0000'0000);
     }
-    TEST_CASE("binary operations") {
+    TEST_CASE("logic operations") {
         uint_t<128> a = 0x01020304U;
         uint32_t b = 0x04030201U;
         const uint_t<128> res_and = a & b;
@@ -87,23 +87,47 @@ TEST_SUITE("with integer types") {
         CHECK_EQ(res_or[0], 0x05030305U);
         CHECK_EQ(res_xor[0], 0x05010105U);
     }
+    TEST_CASE("shift") {
+        constexpr size_t expected = size_t(0x0807060504030201ULL);
+        uint_t<128> a = expected;
+        uint_t<128> b{};
+        b.internal_main[1] = expected;
+
+        const auto move_word_left = a << (8 * sizeof(size_t));
+        const auto move_word_right = b >> (8 * sizeof(size_t));
+        CHECK_EQ(move_word_left[1], expected);
+        CHECK_EQ(move_word_right[0], expected);
+
+        const auto move_halfword_left = a << (4 * sizeof(size_t));
+        const auto move_halfword_right = b >> (4 * sizeof(size_t));
+        CHECK_EQ(move_halfword_left[1], expected >> (4 * sizeof(size_t)));
+        CHECK_EQ(move_halfword_left[0], expected << (4 * sizeof(size_t)));
+        CHECK_EQ(move_halfword_right[0], expected << (4 * sizeof(size_t)));
+        CHECK_EQ(move_halfword_right[1], expected >> (4 * sizeof(size_t)));
+    }
     TEST_CASE("compare") {
         const uint_t<128> a = 0x0102030405060708ULL;
         const uint_t<128> b = 0x1020304050607080ULL;
+
         CHECK_EQ(a < b, true);
         CHECK_EQ(b < a, false);
         CHECK_EQ(a < a, false);
+
         CHECK_EQ(a > b, false);
         CHECK_EQ(b > a, true);
         CHECK_EQ(a > a, false);
+
         CHECK_EQ(a <= b, true);
         CHECK_EQ(b <= a, false);
         CHECK_EQ(a <= a, true);
+
         CHECK_EQ(a >= b, false);
         CHECK_EQ(b >= a, true);
         CHECK_EQ(a >= a, true);
+
         CHECK_EQ(a == b, false);
         CHECK_EQ(a == a, true);
+
         CHECK_EQ(a != b, true);
         CHECK_EQ(a != a, false);
     }
