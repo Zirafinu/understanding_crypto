@@ -106,7 +106,8 @@ template <std::size_t BITS> struct uint_t {
                 std::copy_n(lhs.internal_main.begin(), max_length - word_shift,
                             res.internal_main.begin() + word_shift);
             } else {
-                std::copy_n(lhs.internal_main.begin() + word_shift, max_length, res.internal_main.begin());
+                std::copy_n(lhs.internal_main.begin() + word_shift, max_length - word_shift,
+                            res.internal_main.begin());
             }
         } else {
             size_t carry = 0;
