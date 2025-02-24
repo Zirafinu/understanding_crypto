@@ -21,8 +21,8 @@
                 "COVERAGE": { "value":"On" },
                 "CMAKE_CXX_COMPILER": { "value": "g++" },
                 "CMAKE_BUILD_TYPE": { "value": "Debug" },
-                "CMAKE_CXX_FLAGS": { "value": "-coverage"},
-                "CMAKE_EXE_LINKER_FLAGS": { "value": "-coverage"}
+                "CMAKE_CXX_FLAGS": { "value": "-coverage -fsanitize=address -fsanitize=leak -fsanitize=undefined"},
+                "CMAKE_EXE_LINKER_FLAGS": { "value": "-coverage -fsanitize=address -fsanitize=leak -fsanitize=undefined"}
             }
         },
         {
@@ -40,31 +40,12 @@
     "buildPresets": [
         {
             "name": "default",
-            "configurePreset": "default"
-        },
-        {
-            "name": "coverage",
-            "configurePreset": "coverage"
-        },
-        {
-            "name": "performance",
-            "configurePreset": "performance"
+            "targets": ["all"]
         }
     ],
     "testPresets": [
         {
             "name": "default",
-            "configurePreset": "default",
-            "output": {"outputOnFailure": true}
-        },
-        {
-            "name": "coverage",
-            "configurePreset": "coverage",
-            "output": {"outputOnFailure": true}
-        },
-        {
-            "name": "performance",
-            "configurePreset": "performance",
             "output": {"outputOnFailure": true}
         }
     ],
@@ -81,16 +62,16 @@
             "name": "coverage",
             "steps": [
                 { "type": "configure", "name": "coverage" },
-                { "type": "build",     "name": "coverage" },
-                { "type": "test",      "name": "coverage" }
+                { "type": "build",     "name": "default" },
+                { "type": "test",      "name": "default" }
             ]
         },
         {
             "name": "performance",
             "steps": [
                 { "type": "configure", "name": "performance" },
-                { "type": "build",     "name": "performance" },
-                { "type": "test",      "name": "performance" }
+                { "type": "build",     "name": "default" },
+                { "type": "test",      "name": "default" }
             ]
         }
     ]
